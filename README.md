@@ -7,21 +7,33 @@ Render vertices using Direct3D 12-compatible GPUs.
     |||
     |-|-|
     |Alt + Enter|Toggle between windowed/borderless and fullscreen mode|
-    |Space|Toggle between wireframe and solid fill mode to use when rendering|
-    |W A S D ↑ ← ↓ →|Translate camera|
+    |Space|Toggle between wireframe and solid rendering mode|
+    |W A S D ↑ ← ↓ →|Rotate camera|
+    |Shift + W A S D ↑ ← ↓ →|Rotate camera at half speed|
+    |Page Up/Down|Decrease/increase camera distance|
+    |Home|Reset camera position and direction|
+    |End|Reset camera position|
 
 - Mouse
     |||
     |-|-|
-    |Hold Left Button + Move|Rotate camera|
-    |Wheel|Zoom in/out|
+    |Left button (drag)|Rotate camera|
+    |Wheel|Decrease/increase camera distance|
 
 - Controller
     |||
     |-|-|
-    |A|Toggle between wireframe and solid fill mode to use when rendering|
-    |D-pad|Rotate the camera|
-    |Left/right stick|Rotate camera|
+    |A button|Toggle between wireframe and solid rendering mode|
+    |D-pad|Translate camera|
+    |Left/right shoulder|Decrease/increase camera translation sensitivity|
+    |Left/right stick (rotate)|Rotate camera|
+    |Left stick (press)|Reset camera position|
+    |Right stick (press)|Reset camera direction|
+
+- Combination
+    |||
+    |-|-|
+    |Shift key + Left mouse button (drag)|Translate camera|
 
 ## Library
 
