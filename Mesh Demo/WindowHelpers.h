@@ -11,16 +11,12 @@
 
 namespace Hydr10n {
 	namespace WindowHelpers {
-		BOOL WINAPI CenterMainWindow(HWND hWnd, RECT& rect) {
-			MONITORINFO monitorInfo;
-			monitorInfo.cbSize = sizeof(monitorInfo);
-			const BOOL ret = GetMonitorInfoW(MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST), &monitorInfo);
-			if (ret) {
-				const auto& rc = monitorInfo.rcMonitor;
-				const auto width = rect.right - rect.left, height = rect.bottom - rect.top, x = (rc.right - rc.left - width) / 2, y = (rc.bottom - rc.top - height) / 2;
-				rect = { x, y, x + width, y + height };
-			}
-			return ret;
+		inline void WINAPI CenterWindow(_In_ const RECT& monitorRect, _Inout_ RECT& windowRect) {
+			const auto windowWidth = windowRect.right - windowRect.left, windowHeight = windowRect.bottom - windowRect.top;
+			windowRect.left = (monitorRect.right + monitorRect.left - windowWidth) / 2;
+			windowRect.top = (monitorRect.bottom + monitorRect.top - windowHeight) / 2;
+			windowRect.right = windowRect.left + windowWidth;
+			windowRect.bottom = windowRect.top + windowHeight;
 		}
 
 		enum class WindowMode { Windowed, Borderless, Fullscreen };
@@ -35,8 +31,13 @@ namespace Hydr10n {
 					SetLastError(ERROR_SUCCESS);
 					return TRUE;
 				}
+				MONITORINFO monitorInfo;
+				monitorInfo.cbSize = sizeof(monitorInfo);
+				if (!GetMonitorInfoW(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &monitorInfo))
+					return FALSE;
 				RECT rc{ 0, 0, size.cx, size.cy };
-				if (!CenterMainWindow(m_hWnd, rc) || (m_currentMode == WindowMode::Windowed && !AdjustWindowRectEx(&rc, m_WindowedModeStyle, m_HasMenu, m_WindowedModeExStyle)))
+				CenterWindow(monitorInfo.rcMonitor, rc);
+				if (m_currentMode == WindowMode::Windowed && !AdjustWindowRectEx(&rc, m_WindowedModeStyle, m_HasMenu, m_WindowedModeExStyle))
 					return FALSE;
 				const BOOL ret = SetWindowPos(m_hWnd, HWND_TOP, static_cast<int>(rc.left), static_cast<int>(rc.top), static_cast<int>(rc.right - rc.left), static_cast<int>(rc.bottom - rc.top), SWP_NOZORDER | SWP_FRAMECHANGED);
 				if (ret)
