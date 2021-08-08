@@ -147,7 +147,7 @@ private:
 	DirectX::Mouse::ButtonStateTracker m_mouseButtonStatetracker;
 	DirectX::GamePad::ButtonStateTracker m_gamepadButtonStateTrackers[DirectX::GamePad::MAX_PLAYER_COUNT];
 
-	float m_cameraRadius;
+	float m_cameraRadius = DefaultCameraRadius;
 	DX::OrbitCamera m_orbitCamera;
 
 	void Clear() {

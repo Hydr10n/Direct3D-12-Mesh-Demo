@@ -1,6 +1,6 @@
 /*
  * Header File: WindowHelpers.h
- * Last Update: 2021/08/06
+ * Last Update: 2021/08/08
  *
  * Copyright (C) Hydr10n@GitHub. All Rights Reserved.
  */
@@ -11,30 +11,32 @@
 
 namespace Hydr10n {
 	namespace WindowHelpers {
-		inline BOOL WINAPI CenterMainWindow(RECT& rc) {
-			const LONG cxScreen = GetSystemMetrics(SM_CXSCREEN), cyScreen = GetSystemMetrics(SM_CYSCREEN);
-			const BOOL ret = cxScreen && cyScreen;
+		BOOL WINAPI CenterMainWindow(HWND hWnd, RECT& rect) {
+			MONITORINFO monitorInfo;
+			monitorInfo.cbSize = sizeof(monitorInfo);
+			const BOOL ret = GetMonitorInfoW(MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST), &monitorInfo);
 			if (ret) {
-				const LONG width = rc.right - rc.left, height = rc.bottom - rc.top, x = (cxScreen - width) / 2, y = (cyScreen - height) / 2;
-				rc = { x, y, x + width, y + height };
+				const auto& rc = monitorInfo.rcMonitor;
+				const auto width = rect.right - rect.left, height = rect.bottom - rect.top, x = (rc.right - rc.left - width) / 2, y = (rc.bottom - rc.top - height) / 2;
+				rect = { x, y, x + width, y + height };
 			}
 			return ret;
 		}
 
-		enum class WindowMode { Windowed, Borderless, FullScreen };
+		enum class WindowMode { Windowed, Borderless, Fullscreen };
 
 		class WindowModeHelper {
 		public:
-			WindowModeHelper(HWND hMainWindow, const SIZE& clientSize, WindowMode mode, DWORD dwWindowedModeExStyle, DWORD dwWindowedModeStyle, BOOL bHasMenu) : m_hWnd(hMainWindow), m_clientSize(clientSize), m_currentMode(mode), m_lastMode(mode == WindowMode::FullScreen ? WindowMode::Windowed : WindowMode::FullScreen), m_WindowedModeExStyle(dwWindowedModeExStyle), m_WindowedModeStyle(dwWindowedModeStyle), m_HasMenu(bHasMenu) {}
+			WindowModeHelper(HWND hMainWindow, const SIZE& clientSize, WindowMode mode, DWORD dwWindowedModeExStyle, DWORD dwWindowedModeStyle, BOOL bHasMenu) : m_hWnd(hMainWindow), m_clientSize(clientSize), m_currentMode(mode), m_lastMode(mode == WindowMode::Fullscreen ? WindowMode::Windowed : WindowMode::Fullscreen), m_WindowedModeExStyle(dwWindowedModeExStyle), m_WindowedModeStyle(dwWindowedModeStyle), m_HasMenu(bHasMenu) {}
 
 			BOOL SetClientSize(const SIZE& size) {
-				if (m_currentMode == WindowMode::FullScreen) {
+				if (m_currentMode == WindowMode::Fullscreen) {
 					m_clientSize = size;
 					SetLastError(ERROR_SUCCESS);
 					return TRUE;
 				}
 				RECT rc{ 0, 0, size.cx, size.cy };
-				if (!CenterMainWindow(rc) || (m_currentMode == WindowMode::Windowed && !AdjustWindowRectEx(&rc, m_WindowedModeStyle, m_HasMenu, m_WindowedModeExStyle)))
+				if (!CenterMainWindow(m_hWnd, rc) || (m_currentMode == WindowMode::Windowed && !AdjustWindowRectEx(&rc, m_WindowedModeStyle, m_HasMenu, m_WindowedModeExStyle)))
 					return FALSE;
 				const BOOL ret = SetWindowPos(m_hWnd, HWND_TOP, static_cast<int>(rc.left), static_cast<int>(rc.top), static_cast<int>(rc.right - rc.left), static_cast<int>(rc.bottom - rc.top), SWP_NOZORDER | SWP_FRAMECHANGED);
 				if (ret)
@@ -46,7 +48,7 @@ namespace Hydr10n {
 
 			BOOL SetMode(WindowMode mode) {
 				BOOL ret;
-				if (mode == WindowMode::FullScreen) {
+				if (mode == WindowMode::Fullscreen) {
 					if (ret = (SetWindowLongPtrW(m_hWnd, GWL_EXSTYLE, WS_EX_TOPMOST) || GetLastError() == ERROR_SUCCESS) && (SetWindowLongPtrW(m_hWnd, GWL_STYLE, 0) || GetLastError() == ERROR_SUCCESS) && SetWindowPos(m_hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE)) {
 						ShowWindow(m_hWnd, SW_SHOWMAXIMIZED);
 						if (mode != m_currentMode) {
@@ -62,7 +64,7 @@ namespace Hydr10n {
 					if (ret = (SetWindowLongPtrW(m_hWnd, GWL_EXSTYLE, static_cast<LONG_PTR>(m_WindowedModeExStyle)) || GetLastError() == ERROR_SUCCESS) && (SetWindowLongPtrW(m_hWnd, GWL_STYLE, static_cast<LONG_PTR>(mode == WindowMode::Windowed ? m_WindowedModeStyle : m_WindowedModeStyle & ~(WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX))) || GetLastError() == ERROR_SUCCESS) && SetClientSize(m_clientSize)) {
 						ShowWindow(m_hWnd, SW_SHOWNORMAL);
 						if (mode != currentMode)
-							m_lastMode = m_currentMode == WindowMode::FullScreen ? WindowMode::Windowed : WindowMode::FullScreen;
+							m_lastMode = m_currentMode == WindowMode::Fullscreen ? WindowMode::Windowed : WindowMode::Fullscreen;
 						SetLastError(ERROR_SUCCESS);
 					}
 				}

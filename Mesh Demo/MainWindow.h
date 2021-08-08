@@ -2,6 +2,7 @@
 
 #include "BaseWindow.h"
 #include "WindowHelpers.h"
+
 #include "D3DApp.h"
 
 #include "resource.h"
@@ -18,7 +19,7 @@ public:
 
 		const auto window = GetWindow();
 
-		const auto dpi = GetDpiForSystem();
+		const auto dpi = GetDpiForWindow(window);
 		const SIZE clientSize{ Scale(DefaultDeviceIndependentClientSize.cx, dpi), Scale(DefaultDeviceIndependentClientSize.cy, dpi) };
 
 		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(window, clientSize, DefaultWindowMode, 0, DefaultWindowedModeStyle, FALSE);

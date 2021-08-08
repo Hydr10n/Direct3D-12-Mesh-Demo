@@ -2,7 +2,17 @@
 
 Render vertices using Direct3D 12-compatible GPUs.
 
-## Supported Inputs
+## Interactions
+- Xbox Controller
+    |||
+    |-|-|
+    |A button|Toggle between wireframe and solid rendering mode|
+    |D-pad|Translate camera|
+    |LB/RB|Decrease/increase camera translation sensitivity|
+    |LS/RS (rotate)|Rotate camera|
+    |LS (press)|Reset camera position|
+    |RS (press)|Reset camera direction|
+
 - Keyboard
     |||
     |-|-|
@@ -10,7 +20,7 @@ Render vertices using Direct3D 12-compatible GPUs.
     |Space|Toggle between wireframe and solid rendering mode|
     |W A S D ↑ ← ↓ →|Rotate camera|
     |Shift + W A S D ↑ ← ↓ →|Rotate camera at half speed|
-    |Page Up/Down|Decrease/increase camera distance|
+    |PaUp/PgDn|Decrease/increase camera distance|
     |Home|Reset camera position and direction|
     |End|Reset camera position|
 
@@ -20,23 +30,7 @@ Render vertices using Direct3D 12-compatible GPUs.
     |Left button (drag)|Rotate camera|
     |Wheel|Decrease/increase camera distance|
 
-- Controller
-    |||
-    |-|-|
-    |A button|Toggle between wireframe and solid rendering mode|
-    |D-pad|Translate camera|
-    |Left/right shoulder|Decrease/increase camera translation sensitivity|
-    |Left/right stick (rotate)|Rotate camera|
-    |Left stick (press)|Reset camera position|
-    |Right stick (press)|Reset camera direction|
-
-- Combination
-    |||
-    |-|-|
-    |Shift key + Left mouse button (drag)|Translate camera|
-
 ## Library
-
 ```
 // Defined in header "Meshes.h"
 namespace Hydr10n {
