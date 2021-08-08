@@ -11,12 +11,12 @@
 
 namespace Hydr10n {
 	namespace WindowHelpers {
-		inline void WINAPI CenterWindow(_In_ const RECT& monitorRect, _Inout_ RECT& windowRect) {
-			const auto windowWidth = windowRect.right - windowRect.left, windowHeight = windowRect.bottom - windowRect.top;
-			windowRect.left = (monitorRect.right + monitorRect.left - windowWidth) / 2;
-			windowRect.top = (monitorRect.bottom + monitorRect.top - windowHeight) / 2;
-			windowRect.right = windowRect.left + windowWidth;
-			windowRect.bottom = windowRect.top + windowHeight;
+		inline void WINAPI CenterRect(_In_ const RECT& border, _Inout_ RECT& rect) {
+			const auto rectWidth = rect.right - rect.left, rectHeight = rect.bottom - rect.top;
+			rect.left = (border.right + border.left - rectWidth) / 2;
+			rect.top = (border.bottom + border.top - rectHeight) / 2;
+			rect.right = rect.left + rectWidth;
+			rect.bottom = rect.top + rectHeight;
 		}
 
 		enum class WindowMode { Windowed, Borderless, Fullscreen };
@@ -36,7 +36,7 @@ namespace Hydr10n {
 				if (!GetMonitorInfoW(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &monitorInfo))
 					return FALSE;
 				RECT rc{ 0, 0, size.cx, size.cy };
-				CenterWindow(monitorInfo.rcMonitor, rc);
+				CenterRect(monitorInfo.rcMonitor, rc);
 				if (m_currentMode == WindowMode::Windowed && !AdjustWindowRectEx(&rc, m_WindowedModeStyle, m_HasMenu, m_WindowedModeExStyle))
 					return FALSE;
 				const BOOL ret = SetWindowPos(m_hWnd, HWND_TOP, static_cast<int>(rc.left), static_cast<int>(rc.top), static_cast<int>(rc.right - rc.left), static_cast<int>(rc.bottom - rc.top), SWP_NOZORDER | SWP_FRAMECHANGED);
