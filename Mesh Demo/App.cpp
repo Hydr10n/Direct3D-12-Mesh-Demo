@@ -8,7 +8,7 @@ extern "C" {
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow) {
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow) {
 	if (!DirectX::XMVerifyCPUSupport()) {
 		MessageBoxA(nullptr, "DirectXMath is not supported", nullptr, MB_OK | MB_ICONERROR);
 		return ERROR_CAN_NOT_COMPLETE;

@@ -30,22 +30,24 @@ Render vertices using Direct3D 12-compatible GPUs.
     |Left button (drag)|Rotate camera|
     |Wheel|Decrease/increase camera distance|
 
+---
+
 ## Library
 ```
 // Defined in header "Meshes.h"
+
 namespace Hydr10n {
     namespace Meshes {
-        void CreateRingMesh(float minRadius, float maxRadius, float y, bool clockwise, uint32_t sliceCount, std::vector<DirectX::XMFLOAT3>& m_vertices, std::vector<uint32_t>& m_indices);
-
-        void CreateMeshAroundYAxis(const DirectX::XMFLOAT2* pPoints, size_t pointCount, uint32_t stackCount, uint32_t sliceCount, float offsetX, std::vector<DirectX::XMFLOAT3>& m_vertices, std::vector<uint32_t>& m_indices);
+        class MeshGenerator;
     }
 }
 ```
 
-### Methods
+## Members
+
+### Public Methods
 |Name|Description|
 |-|-|
-|```CreateRingMesh```|Create 3D vertex and index data used to render a ring-shaped mesh paralleled with XZ-plane|
 |```CreateMeshAroundYAxis```|Create 3D vertex and index data used to render a mesh revolved around Y-axis with given 2D adjacent vertices|
 
 ## Remarks
@@ -53,15 +55,15 @@ Current PSO in use may need to be created with D3D12_RASTERIZER_DESC::CullMode s
 
 ## Example: Sphere
 ```CPP
-std::vector<DirectX::VertexPositionColor> m_vertices;
+std::vector<DirectX::VertexPositionNormalColor> m_vertices;
 std::vector<uint32_t> m_indices;
 
 void CreateSphere() {
     using namespace DirectX;
+    using namespace Hydr10n::Meshes;
 
-    std::vector<XMFLOAT3> vertices;
-
-    m_indices.clear();
+    MeshGenerator::VertexCollection vertices;
+    MeshGenerator::IndexCollection indices;
 
     constexpr uint32_t SemiCircleSliceCount = 40;
     std::vector<XMFLOAT2> points;
@@ -70,11 +72,14 @@ void CreateSphere() {
         points.push_back({ cos(radians), sin(radians) });
     }
 
-    Hydr10n::Meshes::CreateMeshAroundYAxis(points.data(), points.size(), 1, SemiCircleSliceCount * 2, 0, vertices, m_indices);
+    MeshGenerator::CreateMeshAroundYAxis(vertices, indices, points.data(), points.size(), 1, SemiCircleSliceCount * 2, 0);
 
     m_vertices.clear();
+    m_vertices.reserve(vertices.size());
     for (const auto& vertex : vertices)
-        m_vertices.push_back({ vertex, XMFLOAT4(Colors::Green) });
+        m_vertices.push_back({ vertex.position, vertex.normal,  XMFLOAT4(Colors::Green) });
+
+    m_indices = std::move(indices);
 }
 ```
 
@@ -82,13 +87,15 @@ https://user-images.githubusercontent.com/39995363/128587276-378d64d8-29ff-4679-
 
 ## Example: Irregular Shape
 ```CPP
-std::vector<DirectX::VertexPositionColor> m_vertices;
+std::vector<DirectX::VertexPositionNormalColor> m_vertices;
 std::vector<uint32_t> m_indices;
 
 void CreateIrregularShape() {
-    std::vector<XMFLOAT3> vertices;
+    using namespace DirectX;
+    using namespace Hydr10n::Meshes;
 
-    m_indices.clear();
+    MeshGenerator::VertexCollection vertices;
+    MeshGenerator::IndexCollection indices;
 
     constexpr XMFLOAT2 Points[]{
         {  0.0f, +1.0f },
@@ -98,11 +105,13 @@ void CreateIrregularShape() {
         {  0.0f, -1.0f }
     };
 
-    Hydr10n::Meshes::CreateMeshAroundYAxis(Points, ARRAYSIZE(Points), 5, 30, 0, vertices, m_indices);
-    
+    MeshGenerator::CreateMeshAroundYAxis(vertices, indices, Points, ARRAYSIZE(Points), 10, 30, 0);
+
     m_vertices.clear();
     for (const auto& vertex : vertices)
-        m_vertices.push_back({ vertex, XMFLOAT4(Colors::Green) });
+        m_vertices.push_back({ vertex.position, vertex.normal,  XMFLOAT4(Colors::Green) });
+
+    m_indices = std::move(indices);
 }
 ```
 

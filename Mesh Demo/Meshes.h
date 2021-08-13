@@ -1,121 +1,138 @@
 /*
  * Header File: Meshes.h
- * Last Update: 2021/08/05
+ * Last Update: 2021/08/13
  *
  * Copyright (C) Hydr10n@GitHub. All Rights Reserved.
  */
 
 #pragma once
 
-#include <DirectXMath.h>
+#include "VertexTypes.h"
+
 #include <vector>
 #include <map>
 #include <set>
 
 namespace Hydr10n {
 	namespace Meshes {
-		void CreateRingMesh(float minRadius, float maxRadius, float y, bool clockwise, uint32_t sliceCount, std::vector<DirectX::XMFLOAT3>& m_vertices, std::vector<uint32_t>& m_indices) {
-			const auto radiansStep = DirectX::XM_2PI / sliceCount;
+		class MeshGenerator {
+		public:
+			using Vertex = DirectX::VertexPositionNormal;
+			using VertexCollection = std::vector<Vertex>;
+			using IndexCollection = std::vector<uint32_t>;
 
-			const uint32_t baseIndex = static_cast<uint32_t>(m_vertices.size());
+			static void CreateMeshAroundYAxis(VertexCollection& vertices, IndexCollection& indices, const DirectX::XMFLOAT2* pPoints, size_t pointCount, uint32_t verticalTessellation = 3, uint32_t horizontalTessellation = 3, float offsetX = 0) {
+				using namespace DirectX;
 
-			for (uint32_t i = 0; i <= sliceCount; i++)
-				m_vertices.push_back({ maxRadius * cosf(i * radiansStep), y, maxRadius * sinf(i * radiansStep) });
+				const auto radiansStep = XM_2PI / horizontalTessellation;
 
-			if (minRadius) {
-				for (uint32_t i = 0; i <= sliceCount; i++)
-					m_vertices.push_back({ minRadius * cosf(i * radiansStep), y, minRadius * sinf(i * radiansStep) });
+				auto minY = FLT_MAX;
 
-				const auto ringVertexCount = sliceCount + 1;
-				for (uint32_t i = 0; i < sliceCount; i++) {
-					const auto a = i + baseIndex, b = ringVertexCount + i + baseIndex, c = i + 1 + baseIndex, d = i + 1 + baseIndex;
+				using Compare = decltype([](const XMFLOAT2& a, const XMFLOAT2& b) {
+					if (a.x < b.x)
+						return true;
+					if (a.x > b.x)
+						return false;
+					return a.y < b.y;
+					});
+				std::map<XMFLOAT2, std::set<XMFLOAT2, Compare>, Compare> points;
 
-					m_indices.push_back(a);
-					m_indices.push_back(clockwise ? b : d);
-					m_indices.push_back(c);
+				for (size_t i = 0; i < pointCount; i++) {
+					const auto& a = pPoints[i], & b = pPoints[(i + 1) % pointCount];
 
-					m_indices.push_back(a);
-					m_indices.push_back(c);
-					m_indices.push_back(clockwise ? d : b);
+					minY = min(minY, min(a.y, b.y));
+
+					if ((i != pointCount - 1 || (a.x == b.x && a.y == b.y)) && (!points.contains(b) || !points[b].contains(a)))
+						points[a].insert(b);
 				}
-			}
-			else {
-				m_vertices.push_back({ 0, y, 0 });
 
-				const uint32_t centerIndex = static_cast<uint32_t>(m_vertices.size() - 1);
-				for (uint32_t i = 0; i < sliceCount; i++) {
-					m_indices.push_back(centerIndex);
-					m_indices.push_back(baseIndex + i + static_cast<uint32_t>(clockwise));
-					m_indices.push_back(baseIndex + i + static_cast<uint32_t>(!clockwise));
-				}
-			}
-		}
+				for (const auto& pair : points) {
+					for (const auto& point : pair.second) {
+						const auto baseIndex = static_cast<uint32_t>(vertices.size());
 
-		void CreateMeshAroundYAxis(const DirectX::XMFLOAT2* pPoints, size_t pointCount, uint32_t stackCount, uint32_t sliceCount, float offsetX, std::vector<DirectX::XMFLOAT3>& m_vertices, std::vector<uint32_t>& m_indices) {
-			using namespace std;
-			using namespace DirectX;
+						const auto& bottom = (point.y < pair.first.y) ? point : pair.first, & top = (point.y >= pair.first.y) ? point : pair.first;
 
-			if (!pointCount || !stackCount || !sliceCount)
-				return;
+						if (top.y != bottom.y) {
+							const auto height = top.y - bottom.y, tessellationHeight = height / verticalTessellation, radiusStep = (top.x - bottom.x) / verticalTessellation;
 
-			const auto radiansStep = XM_2PI / sliceCount;
+							for (uint32_t i = 0; i <= verticalTessellation; i++) {
+								const auto radius = i * radiusStep + bottom.x + offsetX;
 
-			float minY = FLT_MAX, maxY = -FLT_MAX;
+								for (uint32_t j = 0; j <= horizontalTessellation; j++) {
+									const float c = cosf(j * radiansStep), s = sinf(j * radiansStep), dr = bottom.x - top.x;
 
-			using Compare = decltype([](const XMFLOAT2& a, const XMFLOAT2& b) {
-				if (a.x < b.x)
-					return true;
-				if (a.x > b.x)
-					return false;
-				return a.y < b.y;
-				});
-			map<XMFLOAT2, set<XMFLOAT2, Compare>, Compare> matrix;
-
-			for (size_t i = 0; i < pointCount; i++) {
-				const auto& a = pPoints[i], & b = pPoints[(i + 1) % pointCount];
-
-				minY = min(minY, min(a.y, b.y));
-				maxY = max(maxY, max(a.y, b.y));
-
-				if (i != pointCount - 1 || (a.x == b.x && a.y == b.y))
-					if (!matrix.contains(b) || !matrix[b].contains(a))
-						matrix[a].insert(b);
-			}
-
-			for (const auto& points : matrix) {
-				for (const auto& point : points.second) {
-					const uint32_t baseIndex = static_cast<uint32_t>(m_vertices.size());
-
-					const auto& bottom = (point.y < points.first.y) ? point : points.first, & top = (point.y >= points.first.y) ? point : points.first;
-
-					if (top.y != bottom.y) {
-						const auto height = top.y - bottom.y, stackHeight = height / stackCount, radiusStep = (top.x - bottom.x) / stackCount;
-
-						for (uint32_t i = 0; i <= stackCount; i++) {
-							const auto radius = i * radiusStep + bottom.x + offsetX;
-
-							for (uint32_t j = 0; j <= sliceCount; j++)
-								m_vertices.push_back({ radius * cosf(j * radiansStep), i * stackHeight + bottom.y, radius * sinf(j * radiansStep) });
-						}
-
-						const auto ringVertexCount = sliceCount + 1;
-						for (uint32_t i = 0; i < stackCount; i++)
-							for (uint32_t j = 0; j < sliceCount; j++) {
-								const auto a = i * ringVertexCount + j + baseIndex, b = (i + 1) * ringVertexCount + j + baseIndex, c = (i + 1) * ringVertexCount + j + 1 + baseIndex, d = i * ringVertexCount + j + 1 + baseIndex;
-
-								m_indices.push_back(a);
-								m_indices.push_back(b);
-								m_indices.push_back(c);
-
-								m_indices.push_back(a);
-								m_indices.push_back(c);
-								m_indices.push_back(d);
+									Vertex vertex;
+									vertex.position = { radius * c, i * tessellationHeight + bottom.y, radius * s };
+									XMStoreFloat3(&vertex.normal, XMVector3Normalize(XMVector3Cross({ -s, 0, c }, { dr * c, -height, dr * s })));
+									vertices.push_back(std::move(vertex));
+								}
 							}
+
+							const auto ringVertexCount = horizontalTessellation + 1;
+							for (uint32_t i = 0; i < verticalTessellation; i++)
+								for (uint32_t j = 0; j < horizontalTessellation; j++) {
+									const auto a = i * ringVertexCount + j + baseIndex, b = (i + 1) * ringVertexCount + j + baseIndex, c = b + 1, d = a + 1;
+
+									indices.push_back(a);
+									indices.push_back(b);
+									indices.push_back(c);
+
+									indices.push_back(a);
+									indices.push_back(c);
+									indices.push_back(d);
+								}
+						}
+						else
+							CreateRing(vertices, indices, min(bottom.x, top.x) + offsetX, max(bottom.x, top.x) + offsetX, bottom.y, bottom.y > minY, horizontalTessellation);
 					}
-					else if (bottom.y <= minY || top.y >= maxY)
-						CreateRingMesh(min(bottom.x, top.x) + offsetX, max(bottom.x, top.x) + offsetX, bottom.y, top.y >= maxY, sliceCount, m_vertices, m_indices);
 				}
 			}
-		}
+
+		private:
+			static void CreateRing(VertexCollection& vertices, IndexCollection& indices, float innerRadius, float outerRadius, float y, bool clockwiseWinding, uint32_t tessellation) {
+				using namespace DirectX;
+
+				const XMFLOAT3 normal{ 0, clockwiseWinding ? 1.f : -1.f, 0 };
+
+				const auto radiansStep = XM_2PI / tessellation;
+
+				const auto baseIndex = static_cast<uint32_t>(vertices.size());
+
+				for (uint32_t i = 0; i <= tessellation; i++) {
+					const float x = outerRadius * cosf(i * radiansStep), z = outerRadius * sinf(i * radiansStep);
+					vertices.push_back({ { x, y, z }, normal });
+				}
+
+				if (innerRadius) {
+					for (uint32_t i = 0; i <= tessellation; i++) {
+						const float x = innerRadius * cosf(i * radiansStep), z = innerRadius * sinf(i * radiansStep);
+						vertices.push_back({ { x, y, z }, normal });
+					}
+
+					const auto ringVertexCount = tessellation + 1;
+					for (uint32_t i = 0; i < tessellation; i++) {
+						const auto a = i + baseIndex, b = ringVertexCount + i + baseIndex, c = b + 1, d = a + 1;
+
+						indices.push_back(a);
+						indices.push_back(clockwiseWinding ? b : d);
+						indices.push_back(c);
+
+						indices.push_back(a);
+						indices.push_back(c);
+						indices.push_back(clockwiseWinding ? d : b);
+					}
+				}
+				else {
+					vertices.push_back({ { 0, y, 0 }, normal });
+
+					const auto centerIndex = static_cast<uint32_t>(vertices.size() - 1);
+					for (uint32_t i = 0; i < tessellation; i++) {
+						indices.push_back(centerIndex);
+						indices.push_back(baseIndex + i + static_cast<uint32_t>(clockwiseWinding));
+						indices.push_back(baseIndex + i + static_cast<uint32_t>(!clockwiseWinding));
+					}
+				}
+			}
+		};
 	}
 }

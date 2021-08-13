@@ -7,31 +7,27 @@
 
 #include "resource.h"
 
-#define Scale(PixelCount, DPI) MulDiv(static_cast<int>(PixelCount), static_cast<int>(DPI), USER_DEFAULT_SCREEN_DPI)
-
 class MainWindow : public Hydr10n::Windows::BaseWindow {
 public:
-	MainWindow(const MainWindow&) = delete;
-	MainWindow& operator=(const MainWindow&) = delete;
-
-	MainWindow() noexcept(false) : BaseWindow(L"Direct3D 12", 0, nullptr, GetStockBrush(WHITE_BRUSH), LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_ICON_DIRECTX))) {
-		DX::ThrowIfFailed(Initialize(DefaultWindowedModeExStyle, DefaultWindowTitle, DefaultWindowedModeStyle, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr));
+	MainWindow() noexcept(false) : BaseWindow(L"Direct3D 12", nullptr, 0, GetStockBrush(WHITE_BRUSH), LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_ICON_DIRECTX))) {
+		DX::ThrowIfFailed(Create(DefaultTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr));
 
 		const auto window = GetWindow();
 
-		const auto dpi = GetDpiForWindow(window);
-		const SIZE clientSize{ Scale(DefaultDeviceIndependentClientSize.cx, dpi), Scale(DefaultDeviceIndependentClientSize.cy, dpi) };
+		RECT rc;
+		DX::ThrowIfFailed(GetClientRect(window, &rc));
+		const SIZE outputSize{ rc.right - rc.left, rc.bottom - rc.top };
 
-		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(window, clientSize, DefaultWindowMode, 0, DefaultWindowedModeStyle, FALSE);
+		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(window, outputSize, Hydr10n::WindowHelpers::WindowMode::Windowed, 0, WS_OVERLAPPEDWINDOW, FALSE);
 
-		m_app = std::make_unique<decltype(m_app)::element_type>(window, static_cast<UINT>(clientSize.cx), static_cast<UINT>(clientSize.cy), TargetFPS, false);
-
-		ShowWindow(window, SW_SHOW);
-
-		m_windowModeHelper->SetMode(DefaultWindowMode);
+		m_app = std::make_unique<decltype(m_app)::element_type>(window, outputSize);
 	}
 
-	DWORD Run() {
+	WPARAM Run() {
+		ShowWindow(GetWindow(), SW_SHOW);
+
+		m_windowModeHelper->SetMode(m_windowModeHelper->GetMode());
+
 		MSG msg;
 		do
 			if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -41,27 +37,17 @@ public:
 			else
 				m_app->Tick();
 		while (msg.message != WM_QUIT);
-		return static_cast<DWORD>(msg.wParam);
+		return msg.wParam;
 	}
 
 private:
-	static constexpr double TargetFPS = 60;
-
-	static constexpr LPCWSTR DefaultWindowTitle = L"Mesh Demo";
-
-	static constexpr DWORD DefaultWindowedModeExStyle = 0, DefaultWindowedModeStyle = WS_OVERLAPPEDWINDOW;
-
-	static constexpr Hydr10n::WindowHelpers::WindowMode DefaultWindowMode = Hydr10n::WindowHelpers::WindowMode::Windowed;
-
-	static constexpr SIZE DefaultDeviceIndependentClientSize{ 800, 600 };
-
-	bool m_isInSizeMove{};
-
-	std::unique_ptr<D3DApp> m_app;
+	static constexpr LPCWSTR DefaultTitle = L"Mesh";
 
 	std::unique_ptr<Hydr10n::WindowHelpers::WindowModeHelper> m_windowModeHelper;
 
-	LRESULT CALLBACK HandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override {
+	std::unique_ptr<D3DApp> m_app;
+
+	LRESULT CALLBACK OnMessageReceived(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override {
 		using namespace DirectX;
 
 		switch (uMsg) {
@@ -86,11 +72,9 @@ private:
 		case WM_LBUTTONUP:
 		case WM_RBUTTONUP:
 		case WM_MBUTTONUP:
-		case WM_XBUTTONUP: {
+		case WM_XBUTTONUP:
 			ReleaseCapture();
-
-			Mouse::ProcessMessage(uMsg, wParam, lParam);
-		}	break;
+			[[fallthrough]];
 		case WM_INPUT:
 		case WM_MOUSEMOVE:
 		case WM_MOUSEWHEEL:
@@ -108,13 +92,6 @@ private:
 				m_app->OnDeactivated();
 		}	break;
 
-		case WM_PAINT: {
-			if (m_isInSizeMove)
-				m_app->Tick();
-			else
-				return DefWindowProcW(hWnd, uMsg, wParam, lParam);
-		}	break;
-
 		case WM_DPICHANGED: {
 			const auto pRect = reinterpret_cast<PRECT>(lParam);
 			SetWindowPos(hWnd, nullptr, static_cast<int>(pRect->left), static_cast<int>(pRect->top), static_cast<int>(pRect->right - pRect->left), static_cast<int>(pRect->bottom - pRect->top), SWP_NOZORDER);
@@ -125,17 +102,18 @@ private:
 				reinterpret_cast<PMINMAXINFO>(lParam)->ptMinTrackSize = { 320, 200 };
 		}	break;
 
-		case WM_ENTERSIZEMOVE: m_isInSizeMove = true; break;
+		case WM_MOVING:
+		case WM_SIZING:
+			m_app->Tick();
+			break;
 
 		case WM_SIZE: {
 			switch (wParam) {
 			case SIZE_MINIMIZED: m_app->OnSuspending(); break;
 			case SIZE_RESTORED: m_app->OnResuming(); [[fallthrough]];
-			default: m_app->OnWindowSizeChanged(wParam, lParam); break;
+			default: m_app->OnWindowSizeChanged({ LOWORD(lParam), HIWORD(lParam) }); break;
 			}
 		}	break;
-
-		case WM_EXITSIZEMOVE: m_isInSizeMove = false;  break;
 
 		case WM_MENUCHAR: return MAKELRESULT(0, MNC_CLOSE);
 

@@ -16,10 +16,6 @@
     <Filter Include="Common">
       <UniqueIdentifier>{0b5ab10a-7fe0-483b-880d-066dda156795}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shader Files">
-      <UniqueIdentifier>{5c38a92d-7c82-4400-9acc-8f82c0e84b69}</UniqueIdentifier>
-      <Extensions>hlsli;hlsl</Extensions>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="app.manifest" />
@@ -58,9 +54,6 @@
     <ClInclude Include="OrbitCamera.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="ReadData.h">
-      <Filter>Common</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DeviceResources.cpp">
@@ -75,9 +68,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Shader.hlsli">
-      <Filter>Shader Files</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Direct3D 12 Win32 App.rc">
@@ -88,13 +78,5 @@
     <Image Include="directx.ico">
       <Filter>Resource Files</Filter>
     </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="VertexShader.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="PixelShader.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>
