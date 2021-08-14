@@ -251,10 +251,11 @@ private:
 	void CreateEffects() {
 		using namespace DirectX;
 
+		const RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), m_deviceResources->GetDepthBufferFormat());
+
 		for (int i = 0; i < 2; i++) {
 			auto rasterizerDesc = CommonStates::CullNone;
 			rasterizerDesc.FillMode = i ? D3D12_FILL_MODE_WIREFRAME : D3D12_FILL_MODE_SOLID;
-			const RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), m_deviceResources->GetDepthBufferFormat());
 			const EffectPipelineStateDescription psd(&decltype(m_vertices)::value_type::InputLayout, CommonStates::Opaque, CommonStates::DepthDefault, rasterizerDesc, rtState);
 
 			auto& basicEffect = i ? m_basicWireframeEffect : m_basicSolidEffect;
