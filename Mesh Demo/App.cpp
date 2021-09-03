@@ -1,7 +1,5 @@
 #include "MainWindow.h"
 
-#pragma comment(lib, "RuntimeObject")
-
 // Indicates to hybrid graphics systems to prefer the discrete part by default
 extern "C" {
 	__declspec(dllexport) DWORD NvOptimusEnablement = 1;

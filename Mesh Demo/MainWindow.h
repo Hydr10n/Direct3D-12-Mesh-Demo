@@ -18,7 +18,7 @@ public:
 		DX::ThrowIfFailed(GetClientRect(window, &rc));
 		const SIZE outputSize{ rc.right - rc.left, rc.bottom - rc.top };
 
-		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(window, outputSize, Hydr10n::WindowHelpers::WindowMode::Windowed, 0, WS_OVERLAPPEDWINDOW, FALSE);
+		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(window, outputSize, WindowHelpers::WindowMode::Windowed, WS_OVERLAPPEDWINDOW, 0, FALSE);
 
 		m_app = std::make_unique<decltype(m_app)::element_type>(window, outputSize);
 	}
@@ -37,13 +37,14 @@ public:
 			else
 				m_app->Tick();
 		while (msg.message != WM_QUIT);
+
 		return msg.wParam;
 	}
 
 private:
 	static constexpr LPCWSTR DefaultTitle = L"Mesh";
 
-	std::unique_ptr<Hydr10n::WindowHelpers::WindowModeHelper> m_windowModeHelper;
+	std::unique_ptr<WindowHelpers::WindowModeHelper> m_windowModeHelper;
 
 	std::unique_ptr<D3DApp> m_app;
 
@@ -57,9 +58,7 @@ private:
 		} [[fallthrough]];
 		case WM_SYSKEYUP:
 		case WM_KEYDOWN:
-		case WM_KEYUP:
-			Keyboard::ProcessMessage(uMsg, wParam, lParam);
-			break;
+		case WM_KEYUP: Keyboard::ProcessMessage(uMsg, wParam, lParam); break;
 
 		case WM_LBUTTONDOWN:
 		case WM_RBUTTONDOWN:
@@ -69,18 +68,15 @@ private:
 
 			Mouse::ProcessMessage(uMsg, wParam, lParam);
 		}	break;
+
 		case WM_LBUTTONUP:
 		case WM_RBUTTONUP:
 		case WM_MBUTTONUP:
-		case WM_XBUTTONUP:
-			ReleaseCapture();
-			[[fallthrough]];
+		case WM_XBUTTONUP: ReleaseCapture(); [[fallthrough]];
 		case WM_INPUT:
 		case WM_MOUSEMOVE:
 		case WM_MOUSEWHEEL:
-		case WM_MOUSEHOVER:
-			Mouse::ProcessMessage(uMsg, wParam, lParam);
-			break;
+		case WM_MOUSEHOVER: Mouse::ProcessMessage(uMsg, wParam, lParam); break;
 
 		case WM_ACTIVATEAPP: {
 			Keyboard::ProcessMessage(uMsg, wParam, lParam);
@@ -103,9 +99,7 @@ private:
 		}	break;
 
 		case WM_MOVING:
-		case WM_SIZING:
-			m_app->Tick();
-			break;
+		case WM_SIZING: m_app->Tick(); break;
 
 		case WM_SIZE: {
 			switch (wParam) {
@@ -117,7 +111,7 @@ private:
 
 		case WM_MENUCHAR: return MAKELRESULT(0, MNC_CLOSE);
 
-		case WM_DESTROY: PostQuitMessage(0); break;
+		case WM_DESTROY: PostQuitMessage(ERROR_SUCCESS); break;
 
 		default: return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 		}
