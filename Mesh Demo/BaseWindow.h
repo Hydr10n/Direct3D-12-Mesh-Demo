@@ -1,77 +1,78 @@
-/*
- * Header File: BaseWindow.h
- * Last Update: 2021/08/12
- *
- * Copyright (C) Hydr10n@GitHub. All Rights Reserved.
- */
-
 #pragma once
 
 #include <Windows.h>
 #include <windowsx.h>
 
-namespace Hydr10n {
-	namespace Windows {
-		class BaseWindow {
-		public:
-			BaseWindow(const BaseWindow&) = delete;
-			BaseWindow& operator=(const BaseWindow&) = delete;
+namespace Windows {
+	class BaseWindow {
+	private:
+		HWND m_hWnd{};
+		WNDCLASSEXW m_wndClassEx;
 
-			virtual ~BaseWindow() {
-				if (m_hWnd != nullptr) {
-					SetWindowLongPtrW(m_hWnd, GWLP_USERDATA, 0);
-					DestroyWindow(m_hWnd);
-					UnregisterClassW(m_wndClassEx.lpszClassName, m_wndClassEx.hInstance);
-				}
+	public:
+		BaseWindow(const BaseWindow&) = delete;
+		BaseWindow& operator=(const BaseWindow&) = delete;
+
+		virtual ~BaseWindow() {
+			if (m_hWnd != nullptr) {
+				SetWindowLongPtrW(m_hWnd, GWLP_USERDATA, 0);
+
+				DestroyWindow(m_hWnd);
+
+				UnregisterClassW(m_wndClassEx.lpszClassName, m_wndClassEx.hInstance);
+			}
+		}
+
+		HWND GetWindow() const { return m_hWnd; }
+
+	protected:
+		BaseWindow(const WNDCLASSEXW& wndClassEx) : m_wndClassEx(wndClassEx) {
+			if (!m_wndClassEx.cbSize) m_wndClassEx.cbSize = sizeof(m_wndClassEx);
+
+			if (m_wndClassEx.hInstance == nullptr) m_wndClassEx.hInstance = GetModuleHandle(nullptr);
+
+			if (m_wndClassEx.hCursor == nullptr) m_wndClassEx.hCursor = LoadCursor(nullptr, IDC_ARROW);
+
+			if (m_wndClassEx.hbrBackground == nullptr) m_wndClassEx.hbrBackground = GetStockBrush(WHITE_BRUSH);
+
+			if (m_wndClassEx.lpfnWndProc == nullptr) m_wndClassEx.lpfnWndProc = [](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+				const auto _this = reinterpret_cast<decltype(this)>(uMsg == WM_NCCREATE ? reinterpret_cast<LPCREATESTRUCT>(lParam)->lpCreateParams : reinterpret_cast<LPVOID>(GetWindowLongPtrW(hWnd, GWLP_USERDATA)));
+				if (_this != nullptr) return _this->OnMessageReceived(hWnd, uMsg, wParam, lParam);
+				return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+			};
+
+			if (m_wndClassEx.lpszClassName == nullptr) m_wndClassEx.lpszClassName = L"BaseWindow";
+		}
+
+		const WNDCLASSEXW& GetWindowClass() const { return m_wndClassEx; }
+
+		BOOL Create(LPCWSTR lpWindowName, DWORD dwExStyle, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu = nullptr) {
+			if (m_hWnd != nullptr) {
+				SetLastError(ERROR_ALREADY_INITIALIZED);
+
+				return FALSE;
 			}
 
-			HWND GetWindow() const { return m_hWnd; }
+			if (!RegisterClassExW(&m_wndClassEx))
+				return FALSE;
 
-		private:
-			HWND m_hWnd{};
-			WNDCLASSEXW m_wndClassEx{ sizeof(m_wndClassEx) };
+			if ((m_hWnd = CreateWindowExW(dwExStyle, m_wndClassEx.lpszClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, m_wndClassEx.hInstance, this)) == nullptr) {
+				const auto lastError = GetLastError();
 
-		protected:
-			BaseWindow(LPCWSTR lpszClassName = L"BaseWindow", LPCWSTR lpszMenuName = nullptr, UINT style = 0, HBRUSH hbrBackground = GetStockBrush(WHITE_BRUSH), HICON hIcon = LoadIcon(nullptr, IDI_APPLICATION), HCURSOR hCursor = LoadCursor(nullptr, IDC_ARROW)) {
-				m_wndClassEx.lpszClassName = lpszClassName;
-				m_wndClassEx.lpszMenuName = lpszMenuName;
-				m_wndClassEx.style = style;
-				m_wndClassEx.hbrBackground = hbrBackground;
-				m_wndClassEx.hIcon = hIcon;
-				m_wndClassEx.hCursor = hCursor;
-				m_wndClassEx.hInstance = GetModuleHandle(nullptr);
-				m_wndClassEx.lpfnWndProc = [](HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-					const auto _this = reinterpret_cast<decltype(this)>(uMsg == WM_NCCREATE ? reinterpret_cast<LPCREATESTRUCT>(lParam)->lpCreateParams : reinterpret_cast<LPVOID>(GetWindowLongPtrW(hWnd, GWLP_USERDATA)));
-					if (_this != nullptr)
-						return _this->OnMessageReceived(hWnd, uMsg, wParam, lParam);
-					return DefWindowProcW(hWnd, uMsg, wParam, lParam);
-				};
+				UnregisterClassW(m_wndClassEx.lpszClassName, m_wndClassEx.hInstance);
+
+				SetLastError(lastError);
+
+				return FALSE;
 			}
 
-			BaseWindow(const WNDCLASSEXW& wndClassEx) : m_wndClassEx(wndClassEx) {}
+			SetWindowLongPtrW(m_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
-			const WNDCLASSEXW& GetWindowClass() const { return m_wndClassEx; }
+			return TRUE;
+		}
 
-			BOOL Create(LPCWSTR lpWindowName, DWORD dwExStyle, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu = nullptr) {
-				if (m_hWnd != nullptr) {
-					SetLastError(ERROR_ALREADY_INITIALIZED);
-					return FALSE;
-				}
-				if (!RegisterClassExW(&m_wndClassEx))
-					return FALSE;
-				if ((m_hWnd = CreateWindowExW(dwExStyle, m_wndClassEx.lpszClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, m_wndClassEx.hInstance, this)) == nullptr) {
-					const auto lastError = GetLastError();
-					UnregisterClassW(m_wndClassEx.lpszClassName, m_wndClassEx.hInstance);
-					SetLastError(lastError);
-					return FALSE;
-				}
-				SetWindowLongPtrW(m_hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
-				return TRUE;
-			}
+		BOOL Create(LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu = nullptr) { return Create(lpWindowName, 0, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu); }
 
-			BOOL Create(LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu = nullptr) { return Create(lpWindowName, 0, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu); }
-
-			virtual LRESULT CALLBACK OnMessageReceived(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
-		};
+		virtual LRESULT CALLBACK OnMessageReceived(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
 	};
-}
+};

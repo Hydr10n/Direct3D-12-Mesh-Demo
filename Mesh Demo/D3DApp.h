@@ -64,8 +64,7 @@ public:
 	}
 
 	void OnWindowSizeChanged(const SIZE& outputSize) {
-		if (!m_deviceResources->WindowSizeChanged(static_cast<int>(outputSize.cx), static_cast<int>(outputSize.cy)))
-			return;
+		if (!m_deviceResources->WindowSizeChanged(static_cast<int>(outputSize.cx), static_cast<int>(outputSize.cy))) return;
 
 		CreateWindowSizeDependentResources();
 	}
@@ -145,8 +144,7 @@ private:
 	}
 
 	void Render() {
-		if (!m_stepTimer.GetFrameCount())
-			return;
+		if (!m_stepTimer.GetFrameCount()) return;
 
 		m_deviceResources->Prepare();
 
@@ -186,8 +184,7 @@ private:
 			m_gamepadButtonStateTrackers[i].Update(gamePadState);
 
 			if (gamePadState.IsConnected()) {
-				if (gamePadState.thumbSticks.leftX || gamePadState.thumbSticks.leftY || gamePadState.thumbSticks.rightX || gamePadState.thumbSticks.rightY)
-					m_mouse->SetVisible(false);
+				if (gamePadState.thumbSticks.leftX || gamePadState.thumbSticks.leftY || gamePadState.thumbSticks.rightX || gamePadState.thumbSticks.rightY) m_mouse->SetVisible(false);
 
 				if (m_gamepadButtonStateTrackers[i].a == GamepadButtonState::PRESSED) {
 					m_isWireframeEnabled = !m_isWireframeEnabled;
@@ -207,15 +204,13 @@ private:
 			if (m_keyboardStateTracker.IsKeyPressed(key)) {
 				m_mouse->SetVisible(false);
 
-				if (key == Key::Space)
-					m_isWireframeEnabled = !m_isWireframeEnabled;
+				if (key == Key::Space) m_isWireframeEnabled = !m_isWireframeEnabled;
 			}
 
 		const auto mouseState = m_mouse->GetState(), lastMouseState = m_mouseButtonStatetracker.GetLastState();
 		m_mouseButtonStatetracker.Update(mouseState);
 
-		if (m_mouseButtonStatetracker.leftButton == MouseButtonState::PRESSED)
-			m_mouse->SetVisible(false);
+		if (m_mouseButtonStatetracker.leftButton == MouseButtonState::PRESSED) m_mouse->SetVisible(false);
 		else if (m_mouseButtonStatetracker.leftButton == MouseButtonState::RELEASED || (m_mouseButtonStatetracker.leftButton == MouseButtonState::UP && (mouseState.x != lastMouseState.x || mouseState.y != lastMouseState.y)))
 			m_mouse->SetVisible(true);
 
@@ -273,10 +268,10 @@ private:
 		MeshGenerator::VertexCollection vertices;
 		MeshGenerator::IndexCollection indices;
 
-		constexpr uint32_t SemiCircleSliceCount = 200;
+		constexpr auto SemiCircleSliceCount = 200;
 		std::vector<XMFLOAT2> points;
 		for (uint32_t i = 0; i <= SemiCircleSliceCount; i++) {
-			const float radians = -XM_PIDIV2 + i * XM_PI / SemiCircleSliceCount;
+			const auto radians = -XM_PIDIV2 + i * XM_PI / SemiCircleSliceCount;
 			points.push_back({ cos(radians), sin(radians) });
 		}
 
@@ -284,8 +279,7 @@ private:
 
 		m_vertices.clear();
 		m_vertices.reserve(vertices.size());
-		for (const auto& vertex : vertices)
-			m_vertices.push_back({ vertex.position, vertex.normal,  XMFLOAT4(Colors::Teal) });
+		for (const auto& vertex : vertices) m_vertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Teal) });
 
 		m_indices = std::move(indices);
 

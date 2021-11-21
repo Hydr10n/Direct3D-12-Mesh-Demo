@@ -7,35 +7,29 @@
 
 #include "resource.h"
 
-class MainWindow : public Hydr10n::Windows::BaseWindow {
+class MainWindow : public Windows::BaseWindow {
 public:
-	MainWindow() noexcept(false) : BaseWindow(L"Direct3D 12", nullptr, 0, GetStockBrush(WHITE_BRUSH), LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_ICON_DIRECTX))) {
+	MainWindow() noexcept(false) : BaseWindow(WNDCLASSEXW{ .hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_ICON_DIRECTX)), .lpszClassName = L"Direct3D 12" }) {
 		DX::ThrowIfFailed(Create(DefaultTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr));
 
-		const auto window = GetWindow();
-
 		RECT rc;
-		DX::ThrowIfFailed(GetClientRect(window, &rc));
+		DX::ThrowIfFailed(GetClientRect(GetWindow(), &rc));
 		const SIZE outputSize{ rc.right - rc.left, rc.bottom - rc.top };
-
-		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(window, outputSize, WindowHelpers::WindowMode::Windowed, WS_OVERLAPPEDWINDOW, 0, FALSE);
-
-		m_app = std::make_unique<decltype(m_app)::element_type>(window, outputSize);
+		m_app = std::make_unique<decltype(m_app)::element_type>(GetWindow(), outputSize);
 	}
 
 	WPARAM Run() {
-		ShowWindow(GetWindow(), SW_SHOW);
-
+		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(GetWindow(), m_app->GetOutputSize());
 		m_windowModeHelper->SetMode(m_windowModeHelper->GetMode());
 
 		MSG msg;
-		do
+		do {
 			if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
 				TranslateMessage(&msg);
 				DispatchMessageW(&msg);
 			}
-			else
-				m_app->Tick();
+			else m_app->Tick();
+		}
 		while (msg.message != WM_QUIT);
 
 		return msg.wParam;
@@ -53,8 +47,7 @@ private:
 
 		switch (uMsg) {
 		case WM_SYSKEYDOWN: {
-			if (wParam == VK_RETURN && (lParam & 0x60000000) == 0x20000000)
-				m_windowModeHelper->ToggleMode();
+			if (wParam == VK_RETURN && (lParam & 0x60000000) == 0x20000000) m_windowModeHelper->ToggleMode();
 		} [[fallthrough]];
 		case WM_SYSKEYUP:
 		case WM_KEYDOWN:
@@ -82,10 +75,8 @@ private:
 			Keyboard::ProcessMessage(uMsg, wParam, lParam);
 			Mouse::ProcessMessage(uMsg, wParam, lParam);
 
-			if (wParam)
-				m_app->OnActivated();
-			else
-				m_app->OnDeactivated();
+			if (wParam) m_app->OnActivated();
+			else m_app->OnDeactivated();
 		}	break;
 
 		case WM_DPICHANGED: {
@@ -94,8 +85,7 @@ private:
 		}	break;
 
 		case WM_GETMINMAXINFO: {
-			if (lParam)
-				reinterpret_cast<PMINMAXINFO>(lParam)->ptMinTrackSize = { 320, 200 };
+			if (lParam) reinterpret_cast<PMINMAXINFO>(lParam)->ptMinTrackSize = { 320, 200 };
 		}	break;
 
 		case WM_MOVING:

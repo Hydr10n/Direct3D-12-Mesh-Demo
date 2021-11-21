@@ -62,5 +62,6 @@
 #endif
 
 #include "ErrorHelpers.h"
+namespace DX { using namespace ErrorHelpers; }
 
 #pragma comment(lib, "RuntimeObject")

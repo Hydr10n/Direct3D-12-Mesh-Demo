@@ -65,10 +65,10 @@ void CreateSphere() {
     MeshGenerator::VertexCollection vertices;
     MeshGenerator::IndexCollection indices;
 
-    constexpr uint32_t SemiCircleSliceCount = 40;
+    constexpr auto SemiCircleSliceCount = 40;
     std::vector<XMFLOAT2> points;
     for (uint32_t i = 0; i <= SemiCircleSliceCount; i++) {
-        const float radians = -XM_PIDIV2 + i * XM_PI / SemiCircleSliceCount;
+        const auto radians = -XM_PIDIV2 + i * XM_PI / SemiCircleSliceCount;
         points.push_back({ cos(radians), sin(radians) });
     }
 
@@ -76,8 +76,7 @@ void CreateSphere() {
 
     m_vertices.clear();
     m_vertices.reserve(vertices.size());
-    for (const auto& vertex : vertices)
-        m_vertices.push_back({ vertex.position, vertex.normal,  XMFLOAT4(Colors::Green) });
+    for (const auto& vertex : vertices) m_vertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Green) });
 
     m_indices = std::move(indices);
 }
@@ -108,8 +107,7 @@ void CreateIrregularShape() {
     MeshGenerator::CreateMeshAroundYAxis(vertices, indices, Points, ARRAYSIZE(Points), 10, 30, 0);
 
     m_vertices.clear();
-    for (const auto& vertex : vertices)
-        m_vertices.push_back({ vertex.position, vertex.normal,  XMFLOAT4(Colors::Green) });
+    for (const auto& vertex : vertices) m_vertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Green) });
 
     m_indices = std::move(indices);
 }

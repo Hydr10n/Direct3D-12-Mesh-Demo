@@ -28,8 +28,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPWSTR 
 		MessageBoxA(nullptr, e.what(), nullptr, MB_OK | MB_ICONERROR);
 	}
 	catch (...) {
-		if ((ret = static_cast<int>(GetLastError())) != ERROR_SUCCESS)
-			MessageBoxA(nullptr, std::system_category().message(ret).c_str(), nullptr, MB_OK | MB_ICONERROR);
+		ret = static_cast<int>(GetLastError());
+		if (ret != ERROR_SUCCESS) MessageBoxA(nullptr, std::system_category().message(ret).c_str(), nullptr, MB_OK | MB_ICONERROR);
 	}
 	return ret;
 }

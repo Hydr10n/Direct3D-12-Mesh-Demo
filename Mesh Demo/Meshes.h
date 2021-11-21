@@ -1,6 +1,6 @@
 /*
  * Header File: Meshes.h
- * Last Update: 2021/08/13
+ * Last Update: 2021/11/21
  *
  * Copyright (C) Hydr10n@GitHub. All Rights Reserved.
  */
@@ -29,10 +29,8 @@ namespace Hydr10n {
 				auto minY = FLT_MAX;
 
 				using Compare = decltype([](const XMFLOAT2& a, const XMFLOAT2& b) {
-					if (a.x < b.x)
-						return true;
-					if (a.x > b.x)
-						return false;
+					if (a.x < b.x) return true;
+					if (a.x > b.x) return false;
 					return a.y < b.y;
 					});
 				std::map<XMFLOAT2, std::set<XMFLOAT2, Compare>, Compare> points;
@@ -42,8 +40,7 @@ namespace Hydr10n {
 
 					minY = min(minY, min(a.y, b.y));
 
-					if ((i != pointCount - 1 || (a.x == b.x && a.y == b.y)) && (!points.contains(b) || !points[b].contains(a)))
-						points[a].insert(b);
+					if ((i != pointCount - 1 || (a.x == b.x && a.y == b.y)) && (!points.contains(b) || !points[b].contains(a))) points[a].insert(b);
 				}
 
 				for (const auto& pair : points) {
@@ -59,7 +56,7 @@ namespace Hydr10n {
 								const auto radius = i * radiusStep + bottom.x + offsetX;
 
 								for (uint32_t j = 0; j <= horizontalTessellation; j++) {
-									const float c = cosf(j * radiansStep), s = sinf(j * radiansStep), dr = bottom.x - top.x;
+									const auto c = cosf(j * radiansStep), s = sinf(j * radiansStep), dr = bottom.x - top.x;
 
 									Vertex vertex;
 									vertex.position = { radius * c, i * tessellationHeight + bottom.y, radius * s };
@@ -82,8 +79,7 @@ namespace Hydr10n {
 									indices.push_back(d);
 								}
 						}
-						else
-							CreateRing(vertices, indices, min(bottom.x, top.x) + offsetX, max(bottom.x, top.x) + offsetX, bottom.y, bottom.y > minY, horizontalTessellation);
+						else CreateRing(vertices, indices, min(bottom.x, top.x) + offsetX, max(bottom.x, top.x) + offsetX, bottom.y, bottom.y > minY, horizontalTessellation);
 					}
 				}
 			}
@@ -99,13 +95,13 @@ namespace Hydr10n {
 				const auto baseIndex = static_cast<uint32_t>(vertices.size());
 
 				for (uint32_t i = 0; i <= tessellation; i++) {
-					const float x = outerRadius * cosf(i * radiansStep), z = outerRadius * sinf(i * radiansStep);
+					const auto x = outerRadius * cosf(i * radiansStep), z = outerRadius * sinf(i * radiansStep);
 					vertices.push_back({ { x, y, z }, normal });
 				}
 
 				if (innerRadius) {
 					for (uint32_t i = 0; i <= tessellation; i++) {
-						const float x = innerRadius * cosf(i * radiansStep), z = innerRadius * sinf(i * radiansStep);
+						const auto x = innerRadius * cosf(i * radiansStep), z = innerRadius * sinf(i * radiansStep);
 						vertices.push_back({ { x, y, z }, normal });
 					}
 
