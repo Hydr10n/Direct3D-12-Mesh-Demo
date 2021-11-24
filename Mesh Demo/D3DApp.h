@@ -200,12 +200,13 @@ private:
 		m_keyboardStateTracker.Update(keyboardState);
 
 		constexpr Key Keys[]{ Key::Space, Key::W, Key::A, Key::S, Key::D, Key::Up, Key::Left, Key::Down, Key::Right };
-		for (const auto key : Keys)
+		for (const auto key : Keys) {
 			if (m_keyboardStateTracker.IsKeyPressed(key)) {
 				m_mouse->SetVisible(false);
 
 				if (key == Key::Space) m_isWireframeEnabled = !m_isWireframeEnabled;
 			}
+		}
 
 		const auto mouseState = m_mouse->GetState(), lastMouseState = m_mouseButtonStatetracker.GetLastState();
 		m_mouseButtonStatetracker.Update(mouseState);
