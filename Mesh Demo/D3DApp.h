@@ -116,7 +116,7 @@ private:
 	float m_cameraRadius = 3;
 	DX::OrbitCamera m_orbitCamera;
 
-	RenderMode m_renderMode{};
+	RenderMode m_renderMode = RenderMode::Solid;
 	std::map<RenderMode, std::unique_ptr<DirectX::BasicEffect>> m_basicEffects;
 
 	std::vector<DirectX::VertexPositionNormalColor> m_vertices;
