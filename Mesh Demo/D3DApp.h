@@ -96,6 +96,8 @@ public:
 	}
 
 private:
+	using Vertex = DirectX::VertexPositionNormalColor;
+
 	enum class RenderMode { Solid, Wireframe, Count };
 
 	static constexpr float MinCameraRadius = 1, MaxCameraRadius = 10;
@@ -118,9 +120,6 @@ private:
 
 	RenderMode m_renderMode = RenderMode::Solid;
 	std::map<RenderMode, std::unique_ptr<DirectX::BasicEffect>> m_basicEffects;
-
-	std::vector<DirectX::VertexPositionNormalColor> m_vertices;
-	std::vector<uint32_t> m_indices;
 
 	std::unique_ptr<DirectX::ModelMeshPart> m_modelMeshPart;
 
@@ -200,7 +199,7 @@ private:
 			auto rasterizerDesc = CommonStates::CullNone;
 			rasterizerDesc.FillMode = renderMode == RenderMode::Solid ? D3D12_FILL_MODE_SOLID : D3D12_FILL_MODE_WIREFRAME;
 
-			const EffectPipelineStateDescription psd(&decltype(m_vertices)::value_type::InputLayout, CommonStates::Opaque, CommonStates::DepthDefault, rasterizerDesc, rtState);
+			const EffectPipelineStateDescription psd(&Vertex::InputLayout, CommonStates::Opaque, CommonStates::DepthDefault, rasterizerDesc, rtState);
 
 			auto& basicEffect = m_basicEffects[renderMode];
 			basicEffect = std::make_unique<BasicEffect>(m_deviceResources->GetD3DDevice(), EffectFlags::VertexColor | EffectFlags::Lighting, psd);
@@ -226,11 +225,9 @@ private:
 
 		MeshGenerator::CreateMeshAroundYAxis(vertices, indices, points.data(), points.size(), 1, SemiCircleSliceCount * 2, 0);
 
-		m_vertices.clear();
-		m_vertices.reserve(vertices.size());
-		for (const auto& vertex : vertices) m_vertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Teal) });
-
-		m_indices = std::move(indices);
+		std::vector<Vertex> newVertices;
+		newVertices.reserve(vertices.size());
+		for (const auto& vertex : vertices) newVertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Teal) });
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer, indexBuffer;
 
@@ -239,8 +236,8 @@ private:
 		ResourceUploadBatch resourceUpload(device);
 		resourceUpload.Begin();
 
-		DX::ThrowIfFailed(CreateStaticBuffer(device, resourceUpload, m_vertices, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &vertexBuffer));
-		DX::ThrowIfFailed(CreateStaticBuffer(device, resourceUpload, m_indices, D3D12_RESOURCE_STATE_INDEX_BUFFER, &indexBuffer));
+		DX::ThrowIfFailed(CreateStaticBuffer(device, resourceUpload, newVertices, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &vertexBuffer));
+		DX::ThrowIfFailed(CreateStaticBuffer(device, resourceUpload, indices, D3D12_RESOURCE_STATE_INDEX_BUFFER, &indexBuffer));
 
 		resourceUpload.End(m_deviceResources->GetCommandQueue()).wait();
 
@@ -248,14 +245,14 @@ private:
 
 		m_modelMeshPart->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-		m_modelMeshPart->vertexStride = sizeof(m_vertices[0]);
-		m_modelMeshPart->vertexCount = static_cast<uint32_t>(vertices.size());
-		m_modelMeshPart->vertexBufferSize = static_cast<uint32_t>(m_modelMeshPart->vertexStride * m_vertices.size());
+		m_modelMeshPart->vertexStride = sizeof(newVertices[0]);
+		m_modelMeshPart->vertexCount = static_cast<uint32_t>(newVertices.size());
+		m_modelMeshPart->vertexBufferSize = static_cast<uint32_t>(m_modelMeshPart->vertexStride * newVertices.size());
 		m_modelMeshPart->staticVertexBuffer = vertexBuffer;
 
 		m_modelMeshPart->indexFormat = DXGI_FORMAT_R32_UINT;
-		m_modelMeshPart->indexCount = static_cast<uint32_t>(m_indices.size());
-		m_modelMeshPart->indexBufferSize = static_cast<uint32_t>(sizeof(m_indices[0]) * m_indices.size());
+		m_modelMeshPart->indexCount = static_cast<uint32_t>(indices.size());
+		m_modelMeshPart->indexBufferSize = static_cast<uint32_t>(sizeof(indices[0]) * indices.size());
 		m_modelMeshPart->staticIndexBuffer = indexBuffer;
 	}
 
