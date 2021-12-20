@@ -27,6 +27,8 @@
 
 #include "OrbitCamera.h"
 
+#include <map>
+
 #pragma warning(pop)
 
 class D3DApp : public DX::IDeviceNotify {
