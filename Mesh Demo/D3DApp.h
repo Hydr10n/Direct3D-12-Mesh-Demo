@@ -115,7 +115,7 @@ private:
 
 	DirectX::GamePad::ButtonStateTracker m_gamepadButtonStateTrackers[DirectX::GamePad::MAX_PLAYER_COUNT];
 	DirectX::Keyboard::KeyboardStateTracker m_keyboardStateTracker;
-	DirectX::Mouse::ButtonStateTracker m_mouseButtonStatetracker;
+	DirectX::Mouse::ButtonStateTracker m_mouseButtonStateTracker;
 
 	float m_cameraRadius = 3;
 	DX::OrbitCamera m_orbitCamera;
@@ -295,11 +295,11 @@ private:
 			}
 		}
 
-		const auto mouseState = m_mouse->GetState(), lastMouseState = m_mouseButtonStatetracker.GetLastState();
-		m_mouseButtonStatetracker.Update(mouseState);
+		const auto mouseState = m_mouse->GetState(), lastMouseState = m_mouseButtonStateTracker.GetLastState();
+		m_mouseButtonStateTracker.Update(mouseState);
 
-		if (m_mouseButtonStatetracker.leftButton == MouseButtonState::PRESSED) m_mouse->SetVisible(false);
-		else if (m_mouseButtonStatetracker.leftButton == MouseButtonState::RELEASED || (m_mouseButtonStatetracker.leftButton == MouseButtonState::UP && (mouseState.x != lastMouseState.x || mouseState.y != lastMouseState.y))) m_mouse->SetVisible(true);
+		if (m_mouseButtonStateTracker.leftButton == MouseButtonState::PRESSED) m_mouse->SetVisible(false);
+		else if (m_mouseButtonStateTracker.leftButton == MouseButtonState::RELEASED || (m_mouseButtonStateTracker.leftButton == MouseButtonState::UP && (mouseState.x != lastMouseState.x || mouseState.y != lastMouseState.y))) m_mouse->SetVisible(true);
 
 		if (mouseState.scrollWheelValue) {
 			m_mouse->ResetScrollWheelValue();
