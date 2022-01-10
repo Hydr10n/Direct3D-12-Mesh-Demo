@@ -551,31 +551,17 @@ OrbitCamera::OrbitCamera()
 	pImpl->Reset();
 }
 
-// Move constructor.
-OrbitCamera::OrbitCamera(OrbitCamera&& moveFrom)
-	: pImpl(std::move(moveFrom.pImpl))
-{
-}
-
-// Move assignment.
-OrbitCamera& OrbitCamera::operator= (OrbitCamera&& moveFrom)
-{
-	pImpl = std::move(moveFrom.pImpl);
-	return *this;
-}
-
-// Public destructor.
-OrbitCamera::~OrbitCamera()
-{
-}
+OrbitCamera::OrbitCamera(OrbitCamera&&) noexcept = default;
+OrbitCamera& OrbitCamera::operator= (OrbitCamera&&) noexcept = default;
+OrbitCamera::~OrbitCamera() = default;
 
 // Public methods.
-void OrbitCamera::Update(float elapsedTime, const GamePad::State& pad)
+void OrbitCamera::Update(float elapsedTime, const GamePad::State & pad)
 {
 	pImpl->Update(elapsedTime, pad);
 }
 
-void OrbitCamera::Update(float elapsedTime, Mouse& mouse, Keyboard& kb)
+void OrbitCamera::Update(float elapsedTime, Mouse & mouse, Keyboard & kb)
 {
 	pImpl->Update(elapsedTime, mouse, kb);
 }
@@ -633,7 +619,7 @@ void OrbitCamera::SetRadiusRate(float radiusRate)
 	pImpl->m_radiusRate = radiusRate;
 }
 
-void OrbitCamera::SetBoundingBox(const DirectX::BoundingBox& box)
+void OrbitCamera::SetBoundingBox(const DirectX::BoundingBox & box)
 {
 	pImpl->m_bounds = box;
 }
@@ -652,7 +638,7 @@ void XM_CALLCONV OrbitCamera::SetRotation(FXMVECTOR rotation)
 	pImpl->m_cameraRotation = pImpl->m_homeRotation = nr;
 }
 
-void OrbitCamera::SetFrameExtents(const DirectX::BoundingSphere& sphere)
+void OrbitCamera::SetFrameExtents(const DirectX::BoundingSphere & sphere)
 {
 	pImpl->m_viewDirty = true;
 
@@ -662,7 +648,7 @@ void OrbitCamera::SetFrameExtents(const DirectX::BoundingSphere& sphere)
 	pImpl->m_focus = pImpl->m_homeFocus = v;
 }
 
-void OrbitCamera::SetFrameExtents(const DirectX::BoundingBox& box)
+void OrbitCamera::SetFrameExtents(const DirectX::BoundingBox & box)
 {
 	pImpl->m_viewDirty = true;
 

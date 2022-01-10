@@ -2,33 +2,34 @@
 
 Render vertices using Direct3D 12-compatible GPUs.
 
-## Interactions
+## Controls
 - Xbox Controller
     |||
     |-|-|
-    |A button|Toggle between wireframe and solid rendering mode|
-    |D-pad|Translate camera|
+    |View button|Toggle between wireframe and solid render mode|
+    |D-pad|Translate camera X/Y|
+    |LS/RS (rotate)|Orbit camera X/Y|
+    |LS (press)|Return camera to default focus/radius|
+    |RS (press)|Reset camera|
     |LB/RB|Decrease/increase camera translation sensitivity|
-    |LS/RS (rotate)|Rotate camera|
-    |LS (press)|Reset camera position|
-    |RS (press)|Reset camera direction|
+    |LB + RB|Reset camera translation sensitivity|
 
 - Keyboard
     |||
     |-|-|
     |Alt + Enter|Toggle between windowed/borderless and fullscreen mode|
-    |Space|Toggle between wireframe and solid rendering mode|
-    |W A S D ↑ ← ↓ →|Rotate camera|
-    |Shift + W A S D ↑ ← ↓ →|Rotate camera at half speed|
-    |PaUp/PgDn|Decrease/increase camera distance|
-    |Home|Reset camera position and direction|
-    |End|Reset camera position|
+    |Tab|Toggle between wireframe and solid render mode|
+    |W A S D ↑ ← ↓ →|Translate camera X/Y|
+    |Shift + W A S D ↑ ← ↓ →|Translate camera X/Y at half speed|
+    |PageUp/PageDown|Translate camera Z|
+    |Home|Reset camera|
+    |End|Return camera to default focus/radius|
 
 - Mouse
     |||
     |-|-|
-    |Left button (drag)|Rotate camera|
-    |Wheel|Decrease/increase camera distance|
+    |Left button (drag)|Orbit camera X/Y|
+    |Scroll wheel|Increase/decrease camera orbit radius|
 
 ---
 
@@ -36,10 +37,19 @@ Render vertices using Direct3D 12-compatible GPUs.
 ```
 // Defined in header "Meshes.h"
 
-namespace Hydr10n {
-    namespace Meshes {
-        class MeshGenerator;
-    }
+namespace Hydr10n::Meshes {
+    struct MeshGenerator {
+        using Vertex = DirectX::VertexPositionNormal;
+        using VertexCollection = std::vector<Vertex>;
+        using IndexCollection = std::vector<uint32_t>;
+
+        static void CreateMeshAroundYAxis(
+            VertexCollection& vertices, IndexCollection& indices,
+            const DirectX::XMFLOAT2* pPoints, size_t pointCount,
+            uint32_t verticalTessellation = 3, uint32_t horizontalTessellation = 3,
+            float offsetX = 0
+        );
+    };
 }
 ```
 
@@ -55,9 +65,6 @@ Current PSO in use may need to be created with D3D12_RASTERIZER_DESC::CullMode s
 
 ## Example: Sphere
 ```CPP
-std::vector<DirectX::VertexPositionNormalColor> m_vertices;
-std::vector<uint32_t> m_indices;
-
 void CreateSphere() {
     using namespace DirectX;
     using namespace Hydr10n::Meshes;
@@ -68,28 +75,19 @@ void CreateSphere() {
     constexpr auto SemiCircleSliceCount = 40;
     std::vector<XMFLOAT2> points;
     for (uint32_t i = 0; i <= SemiCircleSliceCount; i++) {
-        const auto radians = -XM_PIDIV2 + i * XM_PI / SemiCircleSliceCount;
+        const auto radians = -XM_PIDIV2 + XM_PI * static_cast<float>(i) / SemiCircleSliceCount;
         points.push_back({ cos(radians), sin(radians) });
     }
 
-    MeshGenerator::CreateMeshAroundYAxis(vertices, indices, points.data(), points.size(), 1, SemiCircleSliceCount * 2, 0);
-
-    m_vertices.clear();
-    m_vertices.reserve(vertices.size());
-    for (const auto& vertex : vertices) m_vertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Green) });
-
-    m_indices = std::move(indices);
+    MeshGenerator::CreateMeshAroundYAxis(vertices, indices, points.data(), points.size(), 1, SemiCircleSliceCount * 2);
 }
 ```
 
 https://user-images.githubusercontent.com/39995363/128587276-378d64d8-29ff-4679-97a1-c8777e8b92b1.mp4
 
-## Example: Irregular Shape
+## Example: Arbitrary Shape
 ```CPP
-std::vector<DirectX::VertexPositionNormalColor> m_vertices;
-std::vector<uint32_t> m_indices;
-
-void CreateIrregularShape() {
+void CreateArbitraryShape() {
     using namespace DirectX;
     using namespace Hydr10n::Meshes;
 
@@ -104,12 +102,7 @@ void CreateIrregularShape() {
         {  0.0f, -1.0f }
     };
 
-    MeshGenerator::CreateMeshAroundYAxis(vertices, indices, Points, ARRAYSIZE(Points), 10, 30, 0);
-
-    m_vertices.clear();
-    for (const auto& vertex : vertices) m_vertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Green) });
-
-    m_indices = std::move(indices);
+    MeshGenerator::CreateMeshAroundYAxis(vertices, indices, Points, ARRAYSIZE(Points), 10, 30);
 }
 ```
 

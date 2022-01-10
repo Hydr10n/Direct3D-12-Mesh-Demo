@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-// Indicates to hybrid graphics systems to prefer the discrete part by default
+// Indicate to hybrid graphics systems to prefer the discrete part by default
 extern "C" {
 	__declspec(dllexport) DWORD NvOptimusEnablement = 1;
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;

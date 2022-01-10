@@ -1,44 +1,56 @@
 #pragma once
 
-#include "BaseWindow.h"
+#include "WindowBase.h"
 #include "WindowHelpers.h"
 
 #include "D3DApp.h"
 
 #include "resource.h"
 
-class MainWindow : public Windows::BaseWindow {
+class MainWindow : public Windows::WindowBase {
 public:
-	MainWindow() noexcept(false) : BaseWindow(WNDCLASSEXW{ .hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_ICON_DIRECTX)), .lpszClassName = L"Direct3D 12" }) {
-		DX::ThrowIfFailed(Create(DefaultTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr));
+	MainWindow() noexcept(false) :
+		WindowBase(
+			WNDCLASSEXW{
+				.hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_ICON_DIRECTX)),
+				.lpszClassName = L"Direct3D 12"
+			},
+			DefaultTitle,
+			0, WS_OVERLAPPEDWINDOW,
+			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+			nullptr
+		) {
+		const auto hWnd = GetHandle();
 
 		RECT rc;
-		DX::ThrowIfFailed(GetClientRect(GetWindow(), &rc));
+		DX::ThrowIfFailed(GetClientRect(hWnd, &rc));
 		const SIZE outputSize{ rc.right - rc.left, rc.bottom - rc.top };
-		m_app = std::make_unique<decltype(m_app)::element_type>(GetWindow(), outputSize);
+
+		m_app = std::make_unique<decltype(m_app)::element_type>(hWnd, outputSize);
+
+		m_windowModeHelper.Window = hWnd;
+		m_windowModeHelper.ClientSize = outputSize;
 	}
 
 	WPARAM Run() {
-		m_windowModeHelper = std::make_unique<decltype(m_windowModeHelper)::element_type>(GetWindow(), m_app->GetOutputSize());
-		m_windowModeHelper->SetMode(m_windowModeHelper->GetMode());
+		m_windowModeHelper.Apply();
 
 		MSG msg;
+		msg.message = WM_QUIT;
 		do {
 			if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
 				TranslateMessage(&msg);
 				DispatchMessageW(&msg);
 			}
 			else m_app->Tick();
-		}
-		while (msg.message != WM_QUIT);
-
+		} while (msg.message != WM_QUIT);
 		return msg.wParam;
 	}
 
 private:
 	static constexpr LPCWSTR DefaultTitle = L"Mesh";
 
-	std::unique_ptr<WindowHelpers::WindowModeHelper> m_windowModeHelper;
+	WindowHelpers::WindowModeHelper m_windowModeHelper;
 
 	std::unique_ptr<D3DApp> m_app;
 
@@ -47,7 +59,10 @@ private:
 
 		switch (uMsg) {
 		case WM_SYSKEYDOWN: {
-			if (wParam == VK_RETURN && (lParam & 0x60000000) == 0x20000000) m_windowModeHelper->ToggleMode();
+			if (wParam == VK_RETURN && (lParam & 0x60000000) == 0x20000000) {
+				m_windowModeHelper.ToggleMode();
+				m_windowModeHelper.Apply();
+			}
 		} [[fallthrough]];
 		case WM_SYSKEYUP:
 		case WM_KEYDOWN:
@@ -80,13 +95,11 @@ private:
 		}	break;
 
 		case WM_DPICHANGED: {
-			const auto pRect = reinterpret_cast<PRECT>(lParam);
-			SetWindowPos(hWnd, nullptr, static_cast<int>(pRect->left), static_cast<int>(pRect->top), static_cast<int>(pRect->right - pRect->left), static_cast<int>(pRect->bottom - pRect->top), SWP_NOZORDER);
+			const auto rc = reinterpret_cast<PRECT>(lParam);
+			SetWindowPos(hWnd, nullptr, static_cast<int>(rc->left), static_cast<int>(rc->top), static_cast<int>(rc->right - rc->left), static_cast<int>(rc->bottom - rc->top), SWP_NOZORDER);
 		}	break;
 
-		case WM_GETMINMAXINFO: {
-			if (lParam) reinterpret_cast<PMINMAXINFO>(lParam)->ptMinTrackSize = { 320, 200 };
-		}	break;
+		case WM_GETMINMAXINFO: if (lParam) reinterpret_cast<PMINMAXINFO>(lParam)->ptMinTrackSize = { 320, 200 }; break;
 
 		case WM_MOVING:
 		case WM_SIZING: m_app->Tick(); break;
@@ -95,7 +108,7 @@ private:
 			switch (wParam) {
 			case SIZE_MINIMIZED: m_app->OnSuspending(); break;
 			case SIZE_RESTORED: m_app->OnResuming(); [[fallthrough]];
-			default: m_app->OnWindowSizeChanged({ LOWORD(lParam), HIWORD(lParam) }); break;
+			default: m_app->OnWindowSizeChanged(m_windowModeHelper.ClientSize = { LOWORD(lParam), HIWORD(lParam) }); break;
 			}
 		}	break;
 

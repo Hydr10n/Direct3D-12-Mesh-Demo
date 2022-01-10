@@ -19,8 +19,6 @@
 #include "Model.h"
 #include "Meshes.h"
 
-#include "DirectXHelpers.h"
-
 #include "GamePad.h"
 #include "Keyboard.h"
 #include "Mouse.h"
@@ -51,8 +49,6 @@ public:
 
 		m_orbitCamera.SetRadius(m_cameraRadius, MinCameraRadius, MaxCameraRadius);
 	}
-
-	~D3DApp() { m_deviceResources->WaitForGpu(); }
 
 	SIZE GetOutputSize() const {
 		const auto rc = m_deviceResources->GetOutputSize();
@@ -123,7 +119,7 @@ private:
 	RenderMode m_renderMode = RenderMode::Solid;
 	std::map<RenderMode, std::unique_ptr<DirectX::BasicEffect>> m_basicEffects;
 
-	std::unique_ptr<DirectX::ModelMeshPart> m_modelMeshPart;
+	std::shared_ptr<DirectX::ModelMeshPart> m_modelMeshPart;
 
 	void Clear() {
 		const auto commandList = m_deviceResources->GetCommandList();
@@ -154,7 +150,9 @@ private:
 
 		PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
-		m_basicEffects[m_renderMode]->Apply(commandList);
+		const auto& basicEffect = m_basicEffects[m_renderMode];
+		basicEffect->SetMatrices(DirectX::XMMatrixIdentity(), m_orbitCamera.GetView(), m_orbitCamera.GetProjection());
+		basicEffect->Apply(commandList);
 
 		m_modelMeshPart->Draw(commandList);
 
@@ -170,15 +168,31 @@ private:
 	}
 
 	void Update() {
+		using namespace DirectX;
+
 		PIXBeginEvent(PIX_COLOR_DEFAULT, L"Update");
 
-		UpdateCamera();
+		GamePad::State gamepadStates[GamePad::MAX_PLAYER_COUNT];
+		for (int i = 0; i < GamePad::MAX_PLAYER_COUNT; i++) {
+			gamepadStates[i] = m_gamepad->GetState(i);
+			m_gamepadButtonStateTrackers[i].Update(gamepadStates[i]);
+		}
+
+		const auto keyboardState = m_keyboard->GetState();
+		m_keyboardStateTracker.Update(keyboardState);
+
+		const auto mouseState = m_mouse->GetState(), lastMouseState = m_mouseButtonStateTracker.GetLastState();
+		m_mouseButtonStateTracker.Update(mouseState);
+
+		UpdateCamera(gamepadStates, mouseState, lastMouseState);
 
 		PIXEndEvent();
 	}
 
 	void CreateDeviceDependentResources() {
-		m_graphicsMemory = std::make_unique<decltype(m_graphicsMemory)::element_type>(m_deviceResources->GetD3DDevice());
+		const auto device = m_deviceResources->GetD3DDevice();
+
+		m_graphicsMemory = std::make_unique<decltype(m_graphicsMemory)::element_type>(device);
 
 		CreateEffects();
 
@@ -204,10 +218,10 @@ private:
 			const EffectPipelineStateDescription psd(&Vertex::InputLayout, CommonStates::Opaque, CommonStates::DepthDefault, rasterizerDesc, rtState);
 
 			auto& basicEffect = m_basicEffects[renderMode];
-			basicEffect = std::make_unique<BasicEffect>(m_deviceResources->GetD3DDevice(), EffectFlags::VertexColor | EffectFlags::Lighting, psd);
+			basicEffect = std::make_unique<BasicEffect>(m_deviceResources->GetD3DDevice(), EffectFlags::Lighting, psd);
 			basicEffect->EnableDefaultLighting();
 			basicEffect->DisableSpecular();
-			basicEffect->SetDiffuseColor(Colors::White);
+			basicEffect->SetDiffuseColor(Colors::Teal);
 		}
 	}
 
@@ -221,15 +235,11 @@ private:
 		constexpr auto SemiCircleSliceCount = 200;
 		std::vector<XMFLOAT2> points;
 		for (uint32_t i = 0; i <= SemiCircleSliceCount; i++) {
-			const auto radians = -XM_PIDIV2 + i * XM_PI / SemiCircleSliceCount;
+			const auto radians = -XM_PIDIV2 + XM_PI * static_cast<float>(i) / SemiCircleSliceCount;
 			points.push_back({ cos(radians), sin(radians) });
 		}
 
-		MeshGenerator::CreateMeshAroundYAxis(vertices, indices, points.data(), points.size(), 1, SemiCircleSliceCount * 2, 0);
-
-		std::vector<Vertex> newVertices;
-		newVertices.reserve(vertices.size());
-		for (const auto& vertex : vertices) newVertices.push_back({ vertex.position, vertex.normal, XMFLOAT4(Colors::Teal) });
+		MeshGenerator::CreateMeshAroundYAxis(vertices, indices, points.data(), points.size(), 1, SemiCircleSliceCount * 2);
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer, indexBuffer;
 
@@ -238,18 +248,18 @@ private:
 		ResourceUploadBatch resourceUpload(device);
 		resourceUpload.Begin();
 
-		DX::ThrowIfFailed(CreateStaticBuffer(device, resourceUpload, newVertices, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &vertexBuffer));
+		DX::ThrowIfFailed(CreateStaticBuffer(device, resourceUpload, vertices, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &vertexBuffer));
 		DX::ThrowIfFailed(CreateStaticBuffer(device, resourceUpload, indices, D3D12_RESOURCE_STATE_INDEX_BUFFER, &indexBuffer));
 
 		resourceUpload.End(m_deviceResources->GetCommandQueue()).wait();
 
-		m_modelMeshPart = std::make_unique<decltype(m_modelMeshPart)::element_type>(0);
+		m_modelMeshPart = std::make_shared<decltype(m_modelMeshPart)::element_type>(0);
 
 		m_modelMeshPart->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-		m_modelMeshPart->vertexStride = sizeof(newVertices[0]);
-		m_modelMeshPart->vertexCount = static_cast<uint32_t>(newVertices.size());
-		m_modelMeshPart->vertexBufferSize = static_cast<uint32_t>(m_modelMeshPart->vertexStride * newVertices.size());
+		m_modelMeshPart->vertexStride = sizeof(vertices[0]);
+		m_modelMeshPart->vertexCount = static_cast<uint32_t>(vertices.size());
+		m_modelMeshPart->vertexBufferSize = static_cast<uint32_t>(m_modelMeshPart->vertexStride * vertices.size());
 		m_modelMeshPart->staticVertexBuffer = vertexBuffer;
 
 		m_modelMeshPart->indexFormat = DXGI_FORMAT_R32_UINT;
@@ -258,60 +268,58 @@ private:
 		m_modelMeshPart->staticIndexBuffer = indexBuffer;
 	}
 
-	void UpdateCamera() {
+	void UpdateCamera(const DirectX::GamePad::State(&gamepadStates)[DirectX::GamePad::MAX_PLAYER_COUNT], const DirectX::Mouse::State& mouseState, const DirectX::Mouse::State& lastMouseState) {
 		using namespace DirectX;
 		using Key = Keyboard::Keys;
-		using GamepadButtonState = GamePad::ButtonStateTracker::ButtonState;
 		using MouseButtonState = Mouse::ButtonStateTracker::ButtonState;
+		using GamepadButtonState = GamePad::ButtonStateTracker::ButtonState;
 
-		const auto elapsedSeconds = static_cast<float>(m_stepTimer.GetElapsedSeconds()), totalSeconds = static_cast<float>(m_stepTimer.GetTotalSeconds());
+		const auto elapsedSeconds = static_cast<float>(m_stepTimer.GetElapsedSeconds());
 
 		for (int i = 0; i < GamePad::MAX_PLAYER_COUNT; i++) {
-			const auto gamePadState = m_gamepad->GetState(i);
-			m_gamepadButtonStateTrackers[i].Update(gamePadState);
+			const auto& gamepadState = gamepadStates[i];
 
-			if (gamePadState.IsConnected()) {
-				if (gamePadState.thumbSticks.leftX || gamePadState.thumbSticks.leftY || gamePadState.thumbSticks.rightX || gamePadState.thumbSticks.rightY) m_mouse->SetVisible(false);
+			if (gamepadState.IsConnected()) {
+				if (gamepadState.thumbSticks.leftX || gamepadState.thumbSticks.leftY
+					|| gamepadState.thumbSticks.rightX || gamepadState.thumbSticks.rightY) {
+					m_mouse->SetVisible(false);
+				}
 
-				if (m_gamepadButtonStateTrackers[i].a == GamepadButtonState::PRESSED) {
+				if (m_gamepadButtonStateTrackers[i].view == GamepadButtonState::PRESSED) {
 					m_mouse->SetVisible(false);
 
 					m_renderMode = m_renderMode == RenderMode::Solid ? RenderMode::Wireframe : RenderMode::Solid;
 				}
 
-				m_orbitCamera.Update(elapsedSeconds * 2, gamePadState);
+				m_orbitCamera.Update(elapsedSeconds * 4, gamepadState);
 			}
 		}
 
-		const auto keyboardState = m_keyboard->GetState();
-		m_keyboardStateTracker.Update(keyboardState);
-
-		constexpr Key Keys[]{ Key::Space, Key::W, Key::A, Key::S, Key::D, Key::Up, Key::Left, Key::Down, Key::Right };
+		constexpr Key Keys[]{ Key::Tab, Key::W, Key::A, Key::S, Key::D, Key::Up, Key::Left, Key::Down, Key::Right };
 		for (const auto key : Keys) {
 			if (m_keyboardStateTracker.IsKeyPressed(key)) {
 				m_mouse->SetVisible(false);
 
-				if (key == Key::Space) m_renderMode = m_renderMode == RenderMode::Solid ? RenderMode::Wireframe : RenderMode::Solid;
+				if (key == Key::Tab) m_renderMode = m_renderMode == RenderMode::Solid ? RenderMode::Wireframe : RenderMode::Solid;
 			}
 		}
 
-		const auto mouseState = m_mouse->GetState(), lastMouseState = m_mouseButtonStateTracker.GetLastState();
-		m_mouseButtonStateTracker.Update(mouseState);
-
 		if (m_mouseButtonStateTracker.leftButton == MouseButtonState::PRESSED) m_mouse->SetVisible(false);
-		else if (m_mouseButtonStateTracker.leftButton == MouseButtonState::RELEASED || (m_mouseButtonStateTracker.leftButton == MouseButtonState::UP && (mouseState.x != lastMouseState.x || mouseState.y != lastMouseState.y))) m_mouse->SetVisible(true);
+		else if (m_mouseButtonStateTracker.leftButton == MouseButtonState::RELEASED
+			|| (m_mouseButtonStateTracker.leftButton == MouseButtonState::UP
+				&& (mouseState.x != lastMouseState.x || mouseState.y != lastMouseState.y))) {
+			m_mouse->SetVisible(true);
+		}
 
 		if (mouseState.scrollWheelValue) {
 			m_mouse->ResetScrollWheelValue();
 
 			m_mouse->SetVisible(false);
 
-			m_cameraRadius = std::clamp(m_cameraRadius - 0.2f * mouseState.scrollWheelValue / WHEEL_DELTA, MinCameraRadius, MaxCameraRadius);
+			m_cameraRadius = std::clamp(m_cameraRadius - 0.5f * mouseState.scrollWheelValue / WHEEL_DELTA, MinCameraRadius, MaxCameraRadius);
 			m_orbitCamera.SetRadius(m_cameraRadius, MinCameraRadius, MaxCameraRadius);
 		}
 
 		m_orbitCamera.Update(elapsedSeconds, *m_mouse, *m_keyboard);
-
-		m_basicEffects[m_renderMode]->SetMatrices(XMMatrixIdentity(), m_orbitCamera.GetView(), m_orbitCamera.GetProjection());
 	}
 };

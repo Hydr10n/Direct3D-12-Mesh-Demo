@@ -42,17 +42,11 @@
     <ClInclude Include="WindowHelpers.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="BaseWindow.h">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Meshes.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="OrbitCamera.h">
-      <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="ErrorHelpers.h">
       <Filter>Common</Filter>
@@ -64,9 +58,6 @@
     </ClCompile>
     <ClCompile Include="App.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="OrbitCamera.cpp">
-      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
