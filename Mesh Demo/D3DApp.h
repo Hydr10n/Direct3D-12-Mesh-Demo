@@ -50,6 +50,8 @@ public:
 		m_orbitCamera.SetRadius(m_cameraRadius, MinCameraRadius, MaxCameraRadius);
 	}
 
+	~D3DApp() { m_deviceResources->WaitForGpu(); }
+
 	SIZE GetOutputSize() const {
 		const auto rc = m_deviceResources->GetOutputSize();
 		return { rc.right - rc.left, rc.bottom - rc.top };
